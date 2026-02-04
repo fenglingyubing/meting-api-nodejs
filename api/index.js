@@ -73,31 +73,58 @@ app.get('/api', async (req, res) => {
   }
 });
 
-// 兼容根路径的 API 调用
+// 根路径处理 - 同时支持欢迎页和 API 调用
 app.get('/', async (req, res) => {
-  // 如果有 server 参数，说明是 API 调用
-  if (req.query.server) {
-    return app._router.handle(
-      Object.assign(req, { url: '/api' + req.url.substring(req.url.indexOf('?')) }),
-      res,
-      () => {}
-    );
-  }
+  try {
+    const { server, type, id } = req.query;
 
-  // 否则返回欢迎信息
-  res.json({
-    status: 'ok',
-    message: 'Meting API is running',
-    version: '1.0.0',
-    usage: {
-      search: '/?server=netease&type=search&id=keyword',
-      examples: [
-        '/?server=netease&type=search&id=周杰伦',
-        '/?server=qq&type=search&id=平凡之路',
-        '/?server=kugou&type=search&id=告白气球',
-      ],
-    },
-  });
+    // 如果有 server 参数，说明是 API 调用
+    if (server && type && id) {
+      // 支持的服务器
+      const supportedServers = ['netease', 'tencent', 'qq', 'kugou'];
+      if (!supportedServers.includes(server)) {
+        return res.status(400).json({
+          error: 'Unsupported server',
+          supported: supportedServers,
+        });
+      }
+
+      // 创建 Meting 实例
+      const meting = new Meting(server);
+
+      // 处理搜索请求
+      if (type === 'search') {
+        const results = await meting.search(id, 20);
+        return res.json(results);
+      }
+
+      return res.status(400).json({
+        error: 'Unsupported type',
+        supported: ['search'],
+      });
+    }
+
+    // 否则返回欢迎信息
+    res.json({
+      status: 'ok',
+      message: 'Meting API is running',
+      version: '1.0.0',
+      usage: {
+        search: '/?server=netease&type=search&id=keyword',
+        examples: [
+          '/?server=netease&type=search&id=周杰伦',
+          '/?server=qq&type=search&id=平凡之路',
+          '/?server=kugou&type=search&id=告白气球',
+        ],
+      },
+    });
+  } catch (error) {
+    console.error('Root API Error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
 });
 
 // 404 处理
