@@ -78,8 +78,12 @@ app.get('/', async (req, res) => {
   try {
     const { server, type, id } = req.query;
 
+    console.log('Request received:', { server, type, id });
+
     // 如果有 server 参数，说明是 API 调用
     if (server && type && id) {
+      console.log('Processing API request...');
+
       // 支持的服务器
       const supportedServers = ['netease', 'tencent', 'qq', 'kugou'];
       if (!supportedServers.includes(server)) {
@@ -94,7 +98,9 @@ app.get('/', async (req, res) => {
 
       // 处理搜索请求
       if (type === 'search') {
+        console.log('Searching for:', id);
         const results = await meting.search(id, 20);
+        console.log('Search results:', results.length, 'songs');
         return res.json(results);
       }
 
@@ -108,7 +114,8 @@ app.get('/', async (req, res) => {
     res.json({
       status: 'ok',
       message: 'Meting API is running',
-      version: '1.0.0',
+      version: '1.0.1',
+      timestamp: new Date().toISOString(),
       usage: {
         search: '/?server=netease&type=search&id=keyword',
         examples: [
@@ -123,6 +130,7 @@ app.get('/', async (req, res) => {
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 });
